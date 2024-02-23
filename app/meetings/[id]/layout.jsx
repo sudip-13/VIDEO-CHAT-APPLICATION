@@ -8,9 +8,9 @@ import { usePeer } from "@/components/providers/peer";
 
 export default function Layout({children}){
     const socket = useSocket();
-    const screenShareRef = useRef<HTMLVideoElement>(null);
+    const screenShareRef = useRef(null);
     const session = useSession();
-    const { sendStream, remoteStream } = usePeer();
+    const { sendStream, remoteStream,joinedUsers } = usePeer();
 
 
     const [name, setName] = useState("");
@@ -99,7 +99,7 @@ export default function Layout({children}){
     const sendMessage = () => {
         if (messageInput.trim() !== "") {
 
-            socket.emit("message", { message: messageInput });
+            socket.emit("message", { email:joinedUsers,message: messageInput });
             setMessageInput("");
         }
         socket.on("message", ({ message }) => {

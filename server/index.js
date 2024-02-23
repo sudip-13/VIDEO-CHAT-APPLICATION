@@ -72,14 +72,25 @@ io.on("connection", (socket) => {
 
   socket.on("call-accept", ({ email, ans }) => {
     const socketId = emailToSocketMapping.get(email);
+    
     socket.to(socketId).emit("call-accept", { ans });
   });
-  socket.on("message", ({ message }) => {
-    console.log("Received message:", message);
-    emailToSocketMapping.set(email, socket.id);
-    socketToEmailMapping.set(socket.id, email);
-    socket.emit("message", message);
-  });
+  socket.on("message", ({ email, message }) => {
+    console.log("Received message:", message, email);
+    
+
+    email.forEach((emailAddress) => {
+        const socketId = emailToSocketMapping.get(emailAddress);
+        
+       
+        if (socketId) {
+            console.log(`Emitting message to ${emailAddress}'s socket`);
+            socket.to(socketId).emit("message", message);
+        } else {
+            console.log(`No socket found for email: ${emailAddress}`);
+        }
+    });
+});
   socket.on("disconnect", () => {
     console.log("User disconnected");
   });
