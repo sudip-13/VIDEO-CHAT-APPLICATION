@@ -1,5 +1,3 @@
-"use client"
-
 import React, {
   useCallback,
   useEffect,
@@ -13,60 +11,66 @@ const PeerContext = React.createContext("");
 export const usePeer = () => React.useContext(PeerContext);
 
 export const PeerProvider = ({ children }) => {
-  const [remoteStream, setRemoteStream] = useState(null);
+  const [remoteStreams, setRemoteStreams] = useState({});
   const [joinedUsers, setJoinedUsers] = useState([]);
   const [userNames, setUserNames] = useState([]);
 
-  const updateUser = async (userName,userEmail) => {
+  const updateUser = async (userName, userEmail) => {
     setUserNames((prev) => [...prev, userName]);
     setJoinedUsers((prev) => [...prev, userEmail]);
   };
 
-  const peer = useMemo(() => {
-    if (typeof window !== "undefined") {
-      return new RTCPeerConnection();
-    }
-    return null;
-  }, []);
+  const peers = useMemo(() => ({}), []);
 
-  const createOffer = async () => {
-    if (!peer) return null;
-    const offer = await peer.createOffer();
-    await peer.setLocalDescription(offer);
+  const createOffer = async (userId) => {
+    if (!peers[userId]) return null;
+    const offer = await peers[userId].createOffer();
+    await peers[userId].setLocalDescription(offer);
     return offer;
   };
 
-  const createAnswer = async (offer) => {
-    if (!peer) return null;
-    await peer.setRemoteDescription(offer);
-    const answer = await peer.createAnswer();
-    await peer.setLocalDescription(answer);
+  const createAnswer = async (userId, offer) => {
+    if (!peers[userId]) return null;
+    await peers[userId].setRemoteDescription(offer);
+    const answer = await peers[userId].createAnswer();
+    await peers[userId].setLocalDescription(answer);
     return answer;
   };
 
-  const setRemoteAns = async (ans) => {
-    await peer.setRemoteDescription(ans);
+  const setRemoteAns = async (userId, ans) => {
+    await peers[userId].setRemoteDescription(ans);
   };
 
-  const sendStream = async (Stream) => {
-    const tracks = Stream.getTracks();
+  const sendStream = async (userId, stream) => {
+    const tracks = stream.getTracks();
     for (const track of tracks) {
-      peer.addTrack(track, Stream);
+      peers[userId].addTrack(track, stream);
     }
   };
 
-  const handleTrackEvent = useCallback((ev) => {
+  const handleTrackEvent = useCallback((userId, ev) => {
     const streams = ev.streams;
-    setRemoteStream(streams[0]);
+    setRemoteStreams((prev) => ({
+      ...prev,
+      [userId]: streams[0],
+    }));
   }, []);
 
   useEffect(() => {
-    peer.addEventListener("track", handleTrackEvent);
+    for (const userId in peers) {
+      peers[userId].addEventListener("track", (ev) =>
+        handleTrackEvent(userId, ev)
+      );
+    }
 
     return () => {
-      peer.removeEventListener("track", handleTrackEvent);
+      for (const userId in peers) {
+        peers[userId].removeEventListener("track", (ev) =>
+          handleTrackEvent(userId, ev)
+        );
+      }
     };
-  }, [peer, handleTrackEvent]);
+  }, [peers, handleTrackEvent]);
 
   // Refs for video elements
   const screenShareRef = useRef(null);
@@ -76,18 +80,18 @@ export const PeerProvider = ({ children }) => {
   return (
     <PeerContext.Provider
       value={{
-        peer,
+        peers,
         createOffer,
         createAnswer,
         setRemoteAns,
         sendStream,
-        remoteStream,
+        remoteStreams,
         updateUser,
         joinedUsers,
         screenShareRef,
         remoteStreamRef,
         videoRef,
-        userNames
+        userNames,
       }}
     >
       {children}

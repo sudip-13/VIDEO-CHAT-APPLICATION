@@ -33,10 +33,7 @@ export default function Meetings() {
     },
     [setRemoteAns]
   );
-  const handleNegotiation = useCallback(() => {
-    const localoffer = peer.localDescription;
-    socket.emit("call-accept", { email: joinedUsers ,ans: localoffer });
-  }, [peer.localDescription, socket]);
+
 
   useEffect(() => {
     socket.on("user-joined", handleUserjoined);
@@ -48,12 +45,7 @@ export default function Meetings() {
     };
   }, [socket, handleUserjoined, handleAcceptingCall]);
 
-  useEffect(() => {
-    peer.addEventListener("negotiationneeded", handleNegotiation);
-    return () => {
-      peer.removeEventListener("negotiationneeded", handleNegotiation);
-    };
-  }, [handleNegotiation]);
+ 
   return (
     <>
       <div className="text-white">Joined users: {joinedUsers.join(", ")}</div>
